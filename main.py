@@ -24,6 +24,11 @@ YELLOW_STARSHIP = pygame.transform.rotate(pygame.transform.scale(
 RED_STARSHIP = pygame.transform.rotate(pygame.transform.scale(
     RED_STARSHIP_IMAGE, (STARSHIP_WIDTH, STARSHIP_HEIGHT)), 270)
 
+# Load background image
+SPACE_BACKGROUND = pygame.transform.scale(
+    pygame.image.load(os.path.join(
+        'Assets', 'space.png')), (WIDTH, HEIGHT))
+
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
@@ -45,7 +50,7 @@ LASER_SPEED = 7
 NUM_OF_LASERS = 5
 
 def draw_window(red, yellow, red_lasers, yellow_lasers):
-    WINDOW.fill(WHITE)
+    WINDOW.blit(SPACE_BACKGROUND, (0, 0))
     pygame.draw.rect(WINDOW, BLACK, MIDDLE_BORDER)
     WINDOW.blit(YELLOW_STARSHIP, (yellow.x, yellow.y))
     WINDOW.blit(RED_STARSHIP, (red.x, red.y))
@@ -84,12 +89,16 @@ def handle_lasers(yellow_lasers, red_lasers, yellow,red):
         if red.colliderect(laser):
             pygame.event.post(pygame.event.Event(RED_HIT)) # Make a new event to show red player was hit
             yellow_lasers.remove(laser)
+        elif laser.x > WIDTH: # Check if laser moves off the screen. If it does, remove it.
+            yellow_lasers.remove(laser)
 
     for laser in red_lasers:
         laser.x -= LASER_SPEED
         if yellow.colliderect(laser):
             pygame.event.post(pygame.event.Event(YELLOW_HIT)) # Make a new event to show yellow player was hit
-            yellow_lasers.remove(laser)
+            red_lasers.remove(laser)
+        elif laser.x < 0: # Check if laser moves off the screen. If it does, remove it.
+            red_lasers.remove(laser)
 
 def main():
     yellow = pygame.Rect(100, 300, STARSHIP_WIDTH, STARSHIP_HEIGHT)
