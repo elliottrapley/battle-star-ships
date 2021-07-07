@@ -1,5 +1,7 @@
 import pygame
 import os
+pygame.font.init() # Pygame library for fonts
+pygame.mixer.init() # Pygame library for sound
 
 # Set the game window
 WIDTH, HEIGHT = 900, 500
@@ -29,14 +31,25 @@ SPACE_BACKGROUND = pygame.transform.scale(
     pygame.image.load(os.path.join(
         'Assets', 'space.png')), (WIDTH, HEIGHT))
 
+# Colours
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 YELLOW = (255, 255, 0)
 
+# Sounds
+LASER_HIT_SOUND = pygame.mixer.Sound(
+    os.path.join('Assets', 'Grenade+1.mp3'))
+LASER_FIRE_SOUND = pygame.mixer.Sound(
+    os.path.join('Assets', 'Gun+Silencer.mp3'))
+
 # Frames per second 
 FPS = 60
 
+HEALTH_FONT = pygame.font.SysFont('comicsans', 40)
+WINNER_FONT = pygame.font.SysFont('comicsans', 100)
+
+# Battlefield border
 MIDDLE_BORDER = pygame.Rect(
     WIDTH // 2 - 5, 0, 10, HEIGHT)
 
@@ -49,12 +62,20 @@ LASER_SPEED = 7
 # Number of bullets player has
 NUM_OF_LASERS = 5
 
-def draw_window(red, yellow, red_lasers, yellow_lasers):
+# Draw the background, starships, border and lasers onto the screen. 
+def draw_window(red, yellow, red_lasers, yellow_lasers, red_health, yellow_health):
     WINDOW.blit(SPACE_BACKGROUND, (0, 0))
     pygame.draw.rect(WINDOW, BLACK, MIDDLE_BORDER)
+
+    red_health_text = HEALTH_FONT.render("Health: " + str(red_health), 1, WHITE)
+    yellow_health_text = HEALTH_FONT.render("Health: " + str(yellow_health), 1, WHITE)
+    WINDOW.blit(red_health_text, (WIDTH - red_health_text.get_width() - 10, 10))
+    WINDOW.blit(yellow_health_text, (10, 10))
+
     WINDOW.blit(YELLOW_STARSHIP, (yellow.x, yellow.y))
     WINDOW.blit(RED_STARSHIP, (red.x, red.y))
 
+    # Loop through the lasers list and draw onto the screen
     for laser in red_lasers:
         pygame.draw.rect(WINDOW, RED, laser)
 
@@ -83,7 +104,7 @@ def red_starship_movement(keys_pressed, red):
     if keys_pressed[pygame.K_UP] and red.y - VELOCITY > 0: # Up movement
         red.y -= VELOCITY
 
-def handle_lasers(yellow_lasers, red_lasers, yellow,red):
+def handle_lasers(yellow_lasers, red_lasers, yellow, red):
     for laser in yellow_lasers:
         laser.x += LASER_SPEED
         if red.colliderect(laser):
@@ -100,6 +121,15 @@ def handle_lasers(yellow_lasers, red_lasers, yellow,red):
         elif laser.x < 0: # Check if laser moves off the screen. If it does, remove it.
             red_lasers.remove(laser)
 
+def draw_winner(text):
+    draw_text = WINNER_FONT.render(text, 1, WHITE)
+    WINDOW.blit(draw_text, (
+        WIDTH/2 - draw_text.get_width() / 2, HEIGHT 
+        / 2 - draw_text.get_height())) # Show's winner messasge in the middle of the screen
+
+    pygame.display.update()
+    pygame.time.delay(5000)
+
 def main():
     yellow = pygame.Rect(100, 300, STARSHIP_WIDTH, STARSHIP_HEIGHT)
     red = pygame.Rect(700, 300, STARSHIP_WIDTH, STARSHIP_HEIGHT)
@@ -108,6 +138,10 @@ def main():
     red_lasers = []
     yellow_lasers = []
 
+    # Starship health
+    red_health = 10
+    yellow_health = 10
+
     clock = pygame.time.Clock()
     start = True 
     while start:
@@ -115,6 +149,7 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 start = False
+                pygame.quit()
 
             if event.type == pygame.KEYDOWN:
                 # Fire bullets from yellow 
@@ -122,11 +157,30 @@ def main():
                     laser = pygame.Rect(
                         yellow.x + yellow.width, yellow.y + yellow.height // 2 - 2, 10, 5)
                     yellow_lasers.append(laser)
+                    LASER_FIRE_SOUND.play()
                 # Fire bullets from red
                 if event.key == pygame.K_RCTRL and len(red_lasers) < NUM_OF_LASERS:
                     laser = pygame.Rect(
                         red.x, red.y + red.height // 2 - 2, 10, 5)
                     red_lasers.append(laser)
+                    LASER_FIRE_SOUND.play()
+
+            if event.type == RED_HIT:
+                red_health = red_health - 1
+                LASER_HIT_SOUND.play()
+            if event.type == YELLOW_HIT:
+                yellow_health = yellow_health - 1
+                LASER_HIT_SOUND.play()
+
+        winner_text = ""
+        if red_health <= 0:
+            winner_text = "Yellow Wins!"
+        if yellow_health <= 0:
+            winner_text = "Red Wins!"
+
+        if winner_text != "":
+            draw_winner(winner_text)
+            break
         
         keys_pressed = pygame.key.get_pressed() 
         yellow_starship_movement(keys_pressed, yellow)
@@ -134,9 +188,10 @@ def main():
 
         handle_lasers(yellow_lasers, red_lasers, yellow, red)
 
-        draw_window(red, yellow, red_lasers, yellow_lasers)
+        draw_window(red, yellow, red_lasers, yellow_lasers, 
+                    red_health, yellow_health)
 
-    pygame.quit()
+    main()
 
 if __name__ == "__main__":
     main()
